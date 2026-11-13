@@ -94,7 +94,8 @@ export default function Hud({
       {/* Thanh trên */}
       <div className="pointer-events-auto absolute left-0 right-0 top-0 flex flex-wrap items-center gap-x-4 gap-y-1 bg-gradient-to-b from-black/70 to-transparent px-4 py-2.5 text-white">
         <div className="flex items-center gap-2">
-          <span className="text-xl">🌱</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh, không cần tối ưu ảnh */}
+          <img src="/logo.svg" alt="" width={28} height={28} className="h-7 w-7" />
           <span className="font-serif text-base font-black tracking-wide">Mầm Xanh Umoja</span>
           {process.env.NODE_ENV !== "production" && (
             <span

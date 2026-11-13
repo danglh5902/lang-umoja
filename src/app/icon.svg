@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- favicon: bản giản lược của logo (mặt trời + mầm xanh) để rõ ở 16–32px -->
+  <defs>
+    <radialGradient id="s" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#e76f51"/>
+    </radialGradient>
+    <clipPath id="c"><circle cx="32" cy="32" r="31"/></clipPath>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="#141b17"/>
+  <g clip-path="url(#c)">
+    <circle cx="32" cy="30" r="19" fill="url(#s)"/>
+    <path d="M0 50 Q32 44 64 50 V64 H0 Z" fill="#8b4a2b"/>
+    <path d="M32 50 V31" stroke="#1f7a45" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 37 C25 37 19 33 18 25 C26 25 31 30 32 37 Z" fill="#80ed99"/>
+    <path d="M32 32 C33 24 39 19 47 19 C46 27 40 32 32 32 Z" fill="#80ed99"/>
+  </g>
+</svg>
