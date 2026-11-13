@@ -22,7 +22,7 @@ model Building {
   gridX           Int
   gridY           Int
   destroyedAt     DateTime?
-  source          String     @default("SEED") // SEED | COMMUNITY
+  source          String     @default("SEED") // SEED | ADMIN | COMMUNITY
   contributorName String?
   createdAt       DateTime   @default(now())
   donations       Donation[]

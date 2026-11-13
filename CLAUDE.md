@@ -78,6 +78,11 @@ deploy/ + Dockerfile + .github/workflows/ci-cd.yml   → xem DEPLOY.md
 - **Sức hủy diệt của tòa = `goalAmount`** = số nhân đạo cần góp để phá. Tòa của kẻ xấu: goal = phí đã trả.
 - `totalRaised` chỉ gồm DEMOLISH + FEED (nhân đạo); phí kẻ xấu (`CONTRIBUTE_FEE`) tính riêng `totalDestroy`.
 - Building `status`: `STANDING | DESTROYED | REMOVED` — mọi truy vấn/đếm phải loại `REMOVED`.
+  `source`: `SEED` (tòa mẫu) | `ADMIN` (admin thêm) | `COMMUNITY` (kẻ xấu trả phí). Dựng tòa luôn qua
+  `createBuilding()` trong `game.ts`. Giá tự đặt (kẻ xấu/admin) tối thiểu 10.000đ (`src/lib/buildings.ts`).
+- Docker KHÔNG chạy seed. `ensureBaseData()` (`src/lib/bootstrap.ts`) tự tạo WorldState + em bé + quà khi
+  bảng trống; tòa mẫu thì admin bấm "Nạp 12 tòa mẫu". Dữ liệu mặc định nằm ở `src/lib/defaults.ts`.
+- Giá quà nằm ở bảng `Item`, giá mức hủy diệt ở `LevelPrice` (admin chỉnh); luôn đọc qua `getDestructionLevels()`.
 - **Không dùng `<Html>` của drei**: với React 19 nó gây lỗi `removeChild` khi unmount. Dùng `labels/`:
   component 3D đăng ký `anchorRef(id)`, `LabelLayer` render DOM, `LabelProjector` chiếu vị trí mỗi frame.
 - `reactStrictMode: false` (R3F + double-mount) — đừng bật lại.

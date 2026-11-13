@@ -21,7 +21,8 @@ export interface BuildingData {
   gridY: number;
   destroyedAt: string | null;
   createdAt: string;
-  source: "SEED" | "COMMUNITY";
+  /** SEED = tòa gốc, ADMIN = admin thêm tay, COMMUNITY = kẻ xấu trả phí dựng */
+  source: "SEED" | "ADMIN" | "COMMUNITY";
   contributorName: string | null;
 }
 

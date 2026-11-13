@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { formatDestroy, formatKind, type DestructionLevel } from "@/lib/format";
 import PriceEditor, { type AdminItem } from "@/components/admin/PriceEditor";
+import BuildingCreator from "@/components/admin/BuildingCreator";
 
 interface Contribution {
   id: string;
@@ -132,6 +133,11 @@ export default function AdminPage() {
         </div>
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 
+        <BuildingCreator
+          password={password}
+          buildingCount={data.standingBuildings.length}
+          onDone={() => load(password)}
+        />
         <PriceEditor items={data.items} levels={data.levels} password={password} onSaved={() => load(password)} />
 
         <section className="mt-6">
@@ -174,16 +180,28 @@ export default function AdminPage() {
                     ({formatKind(b.raisedAmount)} / {formatDestroy(b.goalAmount)})
                   </span>
                 </span>
-                {data.testTools && (
+                <span className="flex shrink-0 gap-1.5">
+                  {data.testTools && (
+                    <button
+                      disabled={busy}
+                      onClick={() => act("/api/admin/fast-forward", { buildingId: b.id })}
+                      className="rounded-lg bg-amber-400/90 px-3 py-1 text-xs font-bold text-black disabled:opacity-50"
+                      title="Test: nạp đủ tiền còn thiếu để tòa này sụp ngay"
+                    >
+                      ⏩ Phá nhanh (test)
+                    </button>
+                  )}
                   <button
                     disabled={busy}
-                    onClick={() => act("/api/admin/fast-forward", { buildingId: b.id })}
-                    className="rounded-lg bg-amber-400/90 px-3 py-1 text-xs font-bold text-black disabled:opacity-50"
-                    title="Test: nạp đủ tiền còn thiếu để tòa này sụp ngay"
+                    onClick={() => {
+                      if (confirm(`Gỡ tòa "${b.name}" khỏi làng? Nhân đạo đã góp cho tòa này vẫn được giữ trong lịch sử.`))
+                        void act(`/api/admin/buildings/${b.id}`, {});
+                    }}
+                    className="rounded-lg bg-red-500/70 px-3 py-1 text-xs font-bold disabled:opacity-50"
                   >
-                    ⏩ Phá nhanh (test)
+                    🗑️ Gỡ
                   </button>
-                )}
+                </span>
               </div>
             ))}
             {data.standingBuildings.length === 0 && (

@@ -3,6 +3,7 @@ import { emitWorldEvent } from "./events";
 import { findFreeSpot, slugify } from "./placement";
 import { ANONYMOUS_NAME } from "./format";
 import { getDestructionLevels } from "./prices";
+import { ensureBaseData } from "./bootstrap";
 
 const ACTIVE = { status: { not: "REMOVED" } } as const;
 
@@ -58,6 +59,7 @@ function mergeHonor(rows: { name: string; total: number; count: number }[]) {
 }
 
 export async function getWorld() {
+  await ensureBaseData();
   const [buildings, children, items, world, paidAgg, feedCount, honorRaw, destroyAgg, levels] = await Promise.all([
     prisma.building.findMany({ where: ACTIVE, orderBy: { createdAt: "asc" } }),
     prisma.child.findMany(),
@@ -183,43 +185,21 @@ export async function markDonationPaid(orderCode: number) {
     if (donation.type === "CONTRIBUTE_FEE" && donation.contribution) {
       // Kẻ xấu đã trả phí → tòa nhà rác mọc lên ngay giữa làng (admin có thể gỡ sau)
       const c = donation.contribution;
-      const spot = await findFreeSpot(tx);
       // sức hủy diệt của tòa = số hủy diệt kẻ xấu đã bỏ ra → cần đúng chừng ấy nhân đạo để phá
-      const goalAmount = donation.amount;
-      let slug = slugify(c.name);
-      if (await tx.building.findUnique({ where: { slug } })) slug = `${slug}-${Date.now().toString(36)}`;
-      const building = await tx.building.create({
-        data: {
-          slug,
-          name: c.name,
-          slogan: c.slogan,
-          lore: c.lore,
-          crimes: c.crimes,
-          goalAmount,
-          gridX: spot.gridX,
-          gridY: spot.gridY,
-          source: "COMMUNITY",
-          contributorName: c.contributorName,
-        },
+      const created = await createBuilding(tx, {
+        name: c.name,
+        slogan: c.slogan,
+        lore: c.lore,
+        crimes: c.crimes,
+        goalAmount: donation.amount,
+        source: "COMMUNITY",
+        contributorName: c.contributorName,
       });
       await tx.contribution.update({
         where: { id: c.id },
-        data: { status: "APPROVED", buildingId: building.id },
+        data: { status: "APPROVED", buildingId: created.building.id },
       });
-      events.push({
-        type: "building-created",
-        buildingId: building.id,
-        slug: building.slug,
-        name: building.name,
-        contributorName: building.contributorName,
-      });
-      // tòa mới kéo thế giới lùi lại nếu cần (vd: Hồi III → Hồi II)
-      const destroyedNow = await tx.building.count({ where: { status: "DESTROYED" } });
-      const totalNow = await tx.building.count({ where: ACTIVE });
-      const newPhase = computePhase(destroyedNow, totalNow);
-      if (newPhase !== computePhase(destroyedNow, totalNow - 1)) {
-        events.push({ type: "phase-changed", phase: newPhase });
-      }
+      events.push(...created.events);
     }
 
     return { events, donation: paid };
@@ -290,4 +270,62 @@ export async function addBuildingProgress(
     }
   }
   return events;
+}
+
+/**
+ * Dựng một tòa nhà rác mới (kẻ xấu trả phí xong, hoặc admin thêm tay).
+ * Tự tìm ô trống, chống trùng slug, và báo đổi hồi nếu tòa mới kéo thế giới lùi lại.
+ */
+export async function createBuilding(
+  tx: Tx,
+  data: {
+    name: string;
+    slogan: string;
+    lore: string;
+    crimes: string;
+    goalAmount: number;
+    source: "COMMUNITY" | "ADMIN" | "SEED";
+    contributorName: string | null;
+    gridX?: number;
+    gridY?: number;
+    createdAt?: Date;
+  }
+) {
+  const events: Parameters<typeof emitWorldEvent>[0][] = [];
+  const spot =
+    data.gridX !== undefined && data.gridY !== undefined
+      ? { gridX: data.gridX, gridY: data.gridY }
+      : await findFreeSpot(tx);
+  let slug = slugify(data.name);
+  if (await tx.building.findUnique({ where: { slug } })) slug = `${slug}-${Date.now().toString(36)}`;
+  const building = await tx.building.create({
+    data: {
+      slug,
+      name: data.name,
+      slogan: data.slogan,
+      lore: data.lore,
+      crimes: data.crimes,
+      goalAmount: data.goalAmount,
+      gridX: spot.gridX,
+      gridY: spot.gridY,
+      source: data.source,
+      contributorName: data.contributorName,
+      ...(data.createdAt ? { createdAt: data.createdAt } : {}),
+    },
+  });
+  events.push({
+    type: "building-created",
+    buildingId: building.id,
+    slug: building.slug,
+    name: building.name,
+    contributorName: building.contributorName,
+  });
+  // tòa mới kéo thế giới lùi lại nếu cần (vd: Hồi III → Hồi II)
+  const destroyedNow = await tx.building.count({ where: { status: "DESTROYED" } });
+  const totalNow = await tx.building.count({ where: ACTIVE });
+  const newPhase = computePhase(destroyedNow, totalNow);
+  if (newPhase !== computePhase(destroyedNow, totalNow - 1)) {
+    events.push({ type: "phase-changed", phase: newPhase });
+  }
+  return { building, events };
 }

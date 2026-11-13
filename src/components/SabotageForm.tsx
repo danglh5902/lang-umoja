@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import QrModal, { type PaymentPayload } from "./hud/QrModal";
 import { useWorld } from "@/store/world";
-import { formatDestroy, formatKind, toUnits, type DestructionLevel } from "@/lib/format";
+import { destructionLevelFor, formatDestroy, formatKind, fromUnits, toUnits, type DestructionLevel } from "@/lib/format";
+import { CUSTOM_PRICE_MAX, CUSTOM_PRICE_MIN } from "@/lib/buildings";
+
+/** id giả cho lựa chọn "tự đặt sức hủy diệt" */
+const CUSTOM = 0;
 
 export default function SabotageForm({ levels }: { levels: DestructionLevel[] }) {
   const router = useRouter();
@@ -14,7 +18,19 @@ export default function SabotageForm({ levels }: { levels: DestructionLevel[] })
   const [slogan, setSlogan] = useState("");
   const [lore, setLore] = useState("");
   const [levelId, setLevelId] = useState<number>(levels[1].id);
-  const level = levels.find((l) => l.id === levelId) ?? levels[0];
+  // levelId = CUSTOM → kẻ xấu tự nhập sức hủy diệt (đơn vị hủy diệt, tối thiểu CUSTOM_PRICE_MIN)
+  const [customUnits, setCustomUnits] = useState("");
+  const isCustom = levelId === CUSTOM;
+  const customAmount = fromUnits(Number(customUnits) || 0);
+  const customError =
+    isCustom && customAmount < CUSTOM_PRICE_MIN
+      ? `Tối thiểu ${toUnits(CUSTOM_PRICE_MIN).toLocaleString("vi-VN")} hủy diệt`
+      : isCustom && customAmount > CUSTOM_PRICE_MAX
+        ? `Tối đa ${toUnits(CUSTOM_PRICE_MAX).toLocaleString("vi-VN")} hủy diệt`
+        : null;
+  const level: DestructionLevel = isCustom
+    ? { ...destructionLevelFor(customAmount, levels), id: CUSTOM, amount: customAmount }
+    : (levels.find((l) => l.id === levelId) ?? levels[0]);
   const [payment, setPayment] = useState<PaymentPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,7 +69,13 @@ export default function SabotageForm({ levels }: { levels: DestructionLevel[] })
     const res = await fetch("/api/sabotage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, villainName, slogan, lore, level: levelId }),
+      body: JSON.stringify({
+        name,
+        villainName,
+        slogan,
+        lore,
+        ...(isCustom ? { customAmount } : { level: levelId }),
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -120,6 +142,43 @@ export default function SabotageForm({ levels }: { levels: DestructionLevel[] })
                 </button>
               );
             })}
+            {/* tự đặt sức hủy diệt */}
+            <div
+              onClick={() => setLevelId(CUSTOM)}
+              className={`relative col-span-2 cursor-pointer rounded-2xl border-2 p-3.5 text-left transition ${
+                isCustom
+                  ? "border-red-400 bg-red-600/30 shadow-[0_0_28px_rgba(255,60,60,0.45)]"
+                  : "border-red-900/50 bg-black/35 hover:border-red-600/70"
+              }`}
+            >
+              {isCustom && (
+                <span className="absolute right-2.5 top-2.5 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
+                  ĐÃ CHỌN
+                </span>
+              )}
+              <div className="font-serif text-xl font-black text-red-100">🎯 Tự đặt sức hủy diệt</div>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  inputMode="numeric"
+                  value={customUnits}
+                  onFocus={() => setLevelId(CUSTOM)}
+                  onChange={(e) => {
+                    setLevelId(CUSTOM);
+                    setCustomUnits(e.target.value.replace(/\D/g, ""));
+                  }}
+                  placeholder={`Từ ${toUnits(CUSTOM_PRICE_MIN).toLocaleString("vi-VN")}`}
+                  className="w-40 rounded-xl border border-red-900/50 bg-black/40 px-3 py-2 text-lg font-black text-red-200 outline-none placeholder:text-red-200/30 focus:border-red-500/70"
+                />
+                <span className="text-xs font-semibold text-red-300/80">sức hủy diệt</span>
+              </div>
+              <div className="mt-1.5 text-[11px] leading-snug text-red-100/55">
+                {isCustom && customError
+                  ? customError
+                  : isCustom && customAmount > 0
+                    ? `Xếp vào mức ${level.emoji} ${level.name}.`
+                    : `Tối thiểu ${toUnits(CUSTOM_PRICE_MIN).toLocaleString("vi-VN")} hủy diệt. Muốn bao nhiêu tùy ngươi.`}
+              </div>
+            </div>
           </div>
 
           {/* BƯỚC 2 — đặt tên */}
@@ -185,7 +244,7 @@ export default function SabotageForm({ levels }: { levels: DestructionLevel[] })
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || customError !== null || (isCustom && customAmount === 0)}
             className="mt-1 rounded-2xl bg-gradient-to-r from-red-600 to-red-800 py-3 font-black tracking-wide text-white shadow-[0_0_24px_rgba(220,30,30,0.45)] hover:brightness-110 disabled:opacity-50"
           >
             {loading ? "Đang ký hợp đồng..." : `🩸 Tung ${formatDestroy(level.amount)} & dựng tòa nhà`}
