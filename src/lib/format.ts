@@ -74,12 +74,22 @@ export const DESTRUCTION_LEVELS = [
   },
 ] as const;
 
-export type DestructionLevel = (typeof DESTRUCTION_LEVELS)[number];
+/** Một mức hủy diệt; `amount` (đồng) có thể bị admin đổi — lấy bản hiện hành bằng getDestructionLevels() */
+export interface DestructionLevel {
+  id: number;
+  name: string;
+  emoji: string;
+  amount: number;
+  desc: string;
+}
 
 /** Mức hủy diệt gần nhất với một sức hủy diệt bất kỳ (dùng cho tòa gốc của làng) */
-export function destructionLevelFor(power: number): DestructionLevel {
-  let best: DestructionLevel = DESTRUCTION_LEVELS[0];
-  for (const l of DESTRUCTION_LEVELS) if (power >= l.amount) best = l;
+export function destructionLevelFor(
+  power: number,
+  levels: readonly DestructionLevel[] = DESTRUCTION_LEVELS
+): DestructionLevel {
+  let best: DestructionLevel = levels[0];
+  for (const l of levels) if (power >= l.amount) best = l;
   return best;
 }
 

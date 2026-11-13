@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { emitWorldEvent } from "./events";
 import { findFreeSpot, slugify } from "./placement";
 import { ANONYMOUS_NAME } from "./format";
+import { getDestructionLevels } from "./prices";
 
 const ACTIVE = { status: { not: "REMOVED" } } as const;
 
@@ -57,7 +58,7 @@ function mergeHonor(rows: { name: string; total: number; count: number }[]) {
 }
 
 export async function getWorld() {
-  const [buildings, children, items, world, paidAgg, feedCount, honorRaw, destroyAgg] = await Promise.all([
+  const [buildings, children, items, world, paidAgg, feedCount, honorRaw, destroyAgg, levels] = await Promise.all([
     prisma.building.findMany({ where: ACTIVE, orderBy: { createdAt: "asc" } }),
     prisma.child.findMany(),
     prisma.item.findMany(),
@@ -79,6 +80,7 @@ export async function getWorld() {
       take: 50,
     }),
     prisma.donation.aggregate({ where: { status: "PAID", type: "CONTRIBUTE_FEE" }, _sum: { amount: true } }),
+    getDestructionLevels(),
   ]);
   const destroyed = buildings.filter((b) => b.status === "DESTROYED").length;
   const phase = computePhase(destroyed, buildings.length);
@@ -97,6 +99,7 @@ export async function getWorld() {
     })),
     children: children.map((c) => ({ ...c, ...decayedStats(c) })),
     items,
+    levels,
     honor: mergeHonor(
       honorRaw.map((h) => ({
         name: h.payerName ?? ANONYMOUS_NAME,

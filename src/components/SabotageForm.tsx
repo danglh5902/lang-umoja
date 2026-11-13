@@ -5,16 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import QrModal, { type PaymentPayload } from "./hud/QrModal";
 import { useWorld } from "@/store/world";
-import { DESTRUCTION_LEVELS, formatDestroy, formatKind, toUnits } from "@/lib/format";
+import { formatDestroy, formatKind, toUnits, type DestructionLevel } from "@/lib/format";
 
-export default function SabotageForm() {
+export default function SabotageForm({ levels }: { levels: DestructionLevel[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [villainName, setVillainName] = useState("");
   const [slogan, setSlogan] = useState("");
   const [lore, setLore] = useState("");
-  const [levelId, setLevelId] = useState<number>(DESTRUCTION_LEVELS[1].id);
-  const level = DESTRUCTION_LEVELS.find((l) => l.id === levelId) ?? DESTRUCTION_LEVELS[0];
+  const [levelId, setLevelId] = useState<number>(levels[1].id);
+  const level = levels.find((l) => l.id === levelId) ?? levels[0];
   const [payment, setPayment] = useState<PaymentPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,7 +91,7 @@ export default function SabotageForm() {
             Sức hủy diệt càng lớn, tòa nhà càng to — dân làng phải góp đủ bấy nhiêu <strong>nhân đạo</strong> mới hạ được nó.
           </p>
           <div className="grid grid-cols-2 gap-2.5">
-            {DESTRUCTION_LEVELS.map((l) => {
+            {levels.map((l) => {
               const active = l.id === levelId;
               return (
                 <button

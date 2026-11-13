@@ -85,6 +85,14 @@ model Contribution {
   createdAt       DateTime  @default(now())
 }
 
+/// Giá (sức hủy diệt, tính bằng đồng) của từng mức khi kẻ xấu dựng tòa — admin chỉnh được.
+/// Không có dòng nào thì dùng giá mặc định trong DESTRUCTION_LEVELS (src/lib/format.ts).
+model LevelPrice {
+  id        Int      @id // = DESTRUCTION_LEVELS[].id
+  amount    Int
+  updatedAt DateTime @updatedAt
+}
+
 model WorldState {
   id       Int       @id @default(1)
   sunsetAt DateTime?

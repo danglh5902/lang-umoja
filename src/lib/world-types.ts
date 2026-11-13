@@ -1,4 +1,5 @@
 // Kiểu dữ liệu phía client (JSON từ /api/world — Date đã thành string)
+import type { DestructionLevel } from "./format";
 
 export interface CrimeStats {
   waterPerDay: number;
@@ -67,6 +68,8 @@ export interface WorldData {
   buildings: BuildingData[];
   children: ChildData[];
   items: ItemData[];
+  /** các mức hủy diệt với giá hiện hành (admin chỉnh được) */
+  levels: DestructionLevel[];
   honor: HonorEntry[];
 }
 

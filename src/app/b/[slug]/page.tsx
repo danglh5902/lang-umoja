@@ -3,6 +3,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/db";
 import { destructionLevelFor, formatDestroy, formatKind } from "@/lib/format";
+import { getDestructionLevels } from "@/lib/prices";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function BuildingPoster({
   const qr = await QRCode.toDataURL(url, { width: 300, margin: 1 });
   const progress = Math.min(100, Math.round((building.raisedAmount / building.goalAmount) * 100));
   const destroyed = building.status === "DESTROYED";
+  const level = destructionLevelFor(building.goalAmount, await getDestructionLevels());
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[#131a16] p-4 text-white">
@@ -68,7 +70,7 @@ export default async function BuildingPoster({
             <div className="mt-6">
               <div className="flex justify-between text-xs text-white/70">
                 <span>
-                  {destructionLevelFor(building.goalAmount).emoji} Mức {destructionLevelFor(building.goalAmount).name} — nhân đạo đã góp
+                  {level.emoji} Mức {level.name} — nhân đạo đã góp
                 </span>
                 <span className="font-bold text-amber-300">{progress}%</span>
               </div>

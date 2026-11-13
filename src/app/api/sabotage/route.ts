@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { prisma } from "@/lib/db";
 import { isSunset, newOrderCode } from "@/lib/game";
 import { getPaymentProvider } from "@/lib/payment";
-import { DESTRUCTION_LEVELS } from "@/lib/format";
+import { getDestructionLevels } from "@/lib/prices";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   } | null;
 
   // mức hủy diệt = phí kẻ xấu trả = sức hủy diệt của tòa (số nhân đạo cần để phá)
-  const level = DESTRUCTION_LEVELS.find((l) => l.id === Number(body?.level));
+  const level = (await getDestructionLevels()).find((l) => l.id === Number(body?.level));
   if (!level) {
     return NextResponse.json({ error: "Hãy chọn một mức hủy diệt" }, { status: 400 });
   }

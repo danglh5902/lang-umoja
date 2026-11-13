@@ -54,7 +54,8 @@ export default function BuildingPanel({ building }: { building: BuildingData }) 
 
   const progress = Math.min(1, building.raisedAmount / building.goalAmount);
   const remaining = Math.max(0, building.goalAmount - building.raisedAmount);
-  const power = destructionLevelFor(building.goalAmount);
+  const levels = useWorld((s) => s.world?.levels);
+  const power = destructionLevelFor(building.goalAmount, levels);
 
   const donate = async () => {
     setLoading(true);

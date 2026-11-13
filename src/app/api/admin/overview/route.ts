@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminRequest } from "@/lib/admin";
 import { isProduction, testToolsEnabled } from "@/lib/env";
+import { getDestructionLevels } from "@/lib/prices";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   if (!isAdminRequest(req)) return NextResponse.json({ error: "Sai mật khẩu" }, { status: 401 });
-  const [contributions, donations, buildings] = await Promise.all([
+  const [contributions, donations, buildings, items, levels] = await Promise.all([
     prisma.contribution.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     prisma.donation.findMany({
       orderBy: { createdAt: "desc" },
@@ -27,8 +28,12 @@ export async function GET(req: Request) {
       },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.item.findMany({ orderBy: { price: "asc" } }),
+    getDestructionLevels(),
   ]);
   return NextResponse.json({
+    items,
+    levels,
     contributions,
     donations,
     standingBuildings: buildings,

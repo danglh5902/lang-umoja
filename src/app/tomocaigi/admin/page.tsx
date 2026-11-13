@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { formatDestroy, formatKind } from "@/lib/format";
+import { formatDestroy, formatKind, type DestructionLevel } from "@/lib/format";
+import PriceEditor, { type AdminItem } from "@/components/admin/PriceEditor";
 
 interface Contribution {
   id: string;
@@ -39,6 +40,8 @@ interface Overview {
   standingBuildings: StandingBuilding[];
   env: "production" | "local";
   testTools: boolean;
+  items: AdminItem[];
+  levels: DestructionLevel[];
 }
 
 export default function AdminPage() {
@@ -128,6 +131,8 @@ export default function AdminPage() {
           </Link>
         </div>
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+
+        <PriceEditor items={data.items} levels={data.levels} password={password} onSaved={() => load(password)} />
 
         <section className="mt-6">
           <h2 className="font-bold text-red-300">😈 Tòa nhà do kẻ xấu dựng ({villainBuildings.length})</h2>
