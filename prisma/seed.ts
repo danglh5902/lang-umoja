@@ -152,6 +152,20 @@ const ITEMS = [
 ];
 
 async function main() {
+  // Chốt an toàn: seed XÓA SẠCH dữ liệu. Trên online (NODE_ENV=production) chỉ cho chạy khi database còn trống
+  // (lần deploy đầu), trừ khi cố ý ghi đè bằng FORCE_SEED=1.
+  if (process.env.NODE_ENV === "production" && process.env.FORCE_SEED !== "1") {
+    const existing = await prisma.building.count();
+    if (existing > 0) {
+      console.error(
+        `⛔ Từ chối seed: database online đang có ${existing} tòa nhà và dữ liệu thật.\n` +
+          `   Seed sẽ xóa sạch mọi lượt ủng hộ. Nếu thật sự muốn làm lại từ đầu, chạy kèm FORCE_SEED=1.`
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   await prisma.donation.deleteMany();
   await prisma.contribution.deleteMany();
   await prisma.building.deleteMany();

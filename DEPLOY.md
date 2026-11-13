@@ -124,7 +124,9 @@ Không cần tạo token cho kho image — workflow dùng sẵn `GITHUB_TOKEN`.
 Push code lên nhánh `main` (hoặc vào tab **Actions → CI/CD → Run workflow**). Theo dõi ở tab **Actions**:
 job **Kiểm tra & build** chạy trước, qua rồi mới tới **Build image & deploy lên VPS**.
 
-Sau khi deploy xong, **tạo dữ liệu ban đầu — CHỈ CHẠY MỘT LẦN** (lệnh này xóa sạch rồi tạo lại 12 tòa, 8 em bé):
+Sau khi deploy xong, **tạo dữ liệu ban đầu** (12 tòa, 8 em bé). Trên online, lệnh này chỉ chạy được khi database
+còn trống — nếu đã có dữ liệu nó sẽ từ chối để bảo vệ các lượt ủng hộ thật (muốn làm lại từ đầu thật sự thì thêm
+`-e FORCE_SEED=1` sau `exec`):
 
 ```bash
 cd /opt/umoja && docker compose exec app npx prisma db seed
@@ -184,6 +186,17 @@ scp prisma/dev.db root@IP_VPS:/opt/umoja/data/umoja.db
 ```bash
 chown 1000:1000 /opt/umoja/data/umoja.db && cd /opt/umoja && docker compose restart app
 ```
+
+## Hai môi trường, hai database riêng
+
+| | Local (`npm run dev`) | Online (VPS) |
+|---|---|---|
+| Database | `prisma/dev.db` trên máy | `/opt/umoja/data/umoja.db` |
+| Nhận biết | HUD có nhãn "🧪 Môi trường thử", admin ghi LOCAL | admin ghi "🌐 ONLINE — dữ liệu thật" |
+| `prisma db seed` | chạy thoải mái | chỉ khi database trống (hoặc `FORCE_SEED=1`) |
+| Nút "Phá nhanh (test)" | có | tắt (bật bằng `ENABLE_TEST_TOOLS=1` trong `.env`) |
+
+Git chỉ chở code, không chở dữ liệu: `prisma/dev.db` bị `.gitignore` chặn, nên hai bên không bao giờ ghi đè nhau.
 
 ## Lưu ý
 

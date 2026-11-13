@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminRequest } from "@/lib/admin";
+import { isProduction, testToolsEnabled } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -27,5 +28,11 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "asc" },
     }),
   ]);
-  return NextResponse.json({ contributions, donations, standingBuildings: buildings });
+  return NextResponse.json({
+    contributions,
+    donations,
+    standingBuildings: buildings,
+    env: isProduction() ? "production" : "local",
+    testTools: testToolsEnabled(),
+  });
 }

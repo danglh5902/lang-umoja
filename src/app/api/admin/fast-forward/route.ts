@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminRequest } from "@/lib/admin";
 import { markDonationPaid, newOrderCode } from "@/lib/game";
+import { testToolsEnabled } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!isAdminRequest(req)) return NextResponse.json({ error: "Sai mật khẩu" }, { status: 401 });
+  // tạo lượt góp giả → chỉ dùng ở local để không làm bẩn dữ liệu thật trên online
+  if (!testToolsEnabled())
+    return NextResponse.json({ error: "Công cụ test đã tắt trên môi trường online" }, { status: 403 });
   const body = (await req.json().catch(() => null)) as { buildingId?: string } | null;
 
   const building = body?.buildingId

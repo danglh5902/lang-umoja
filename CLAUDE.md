@@ -94,6 +94,14 @@ deploy/ + Dockerfile + .github/workflows/ci-cd.yml   → xem DEPLOY.md
 - Tên người dùng được chuẩn hóa NFC phía server; lượt góp không tên hiện là "Người ẩn danh".
 - Âm thanh chỉ phát sau thao tác đầu tiên của người xem (chính sách autoplay) — `installSfxUnlock()`.
 
+## Hai môi trường (database tách biệt — người dùng yêu cầu)
+
+- Local `npm run dev` → `prisma/dev.db` (dữ liệu thử). Online (Docker, `NODE_ENV=production`) → `/app/data/umoja.db`
+  (dữ liệu thật). Không đồng bộ; `dev.db` không bao giờ lên git.
+- `src/lib/env.ts`: `isProduction()`, `testToolsEnabled()`. Seed từ chối chạy trên online khi đã có dữ liệu
+  (trừ `FORCE_SEED=1`); `/api/admin/fast-forward` tắt trên online (trừ `ENABLE_TEST_TOOLS=1`).
+- HUD hiện nhãn "🧪 Môi trường thử" khi `NODE_ENV !== production`; admin hiện LOCAL/ONLINE.
+
 ## Kiểm thử thủ công nhanh
 
 - Thanh toán giả lập: bấm "Tôi đã chuyển khoản (giả lập)" trong hộp QR (hoặc `POST /api/mock-pay {orderCode}`).

@@ -37,6 +37,8 @@ interface Overview {
   contributions: Contribution[];
   donations: DonationRow[];
   standingBuildings: StandingBuilding[];
+  env: "production" | "local";
+  testTools: boolean;
 }
 
 export default function AdminPage() {
@@ -111,7 +113,16 @@ export default function AdminPage() {
     <main className="min-h-dvh bg-[#131a16] px-4 py-8 text-white">
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-black">🛡️ Hội đồng làng Umoja</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-black">
+            🛡️ Hội đồng làng Umoja
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                data.env === "production" ? "bg-red-500/80 text-white" : "bg-sky-500/80 text-white"
+              }`}
+            >
+              {data.env === "production" ? "🌐 ONLINE — dữ liệu thật" : "🧪 LOCAL — dữ liệu thử"}
+            </span>
+          </h1>
           <Link href="/" className="text-sm text-white/50 hover:text-white">
             ← Về làng
           </Link>
@@ -158,14 +169,16 @@ export default function AdminPage() {
                     ({formatKind(b.raisedAmount)} / {formatDestroy(b.goalAmount)})
                   </span>
                 </span>
-                <button
-                  disabled={busy}
-                  onClick={() => act("/api/admin/fast-forward", { buildingId: b.id })}
-                  className="rounded-lg bg-amber-400/90 px-3 py-1 text-xs font-bold text-black disabled:opacity-50"
-                  title="Test: nạp đủ tiền còn thiếu để tòa này sụp ngay"
-                >
-                  ⏩ Phá nhanh (test)
-                </button>
+                {data.testTools && (
+                  <button
+                    disabled={busy}
+                    onClick={() => act("/api/admin/fast-forward", { buildingId: b.id })}
+                    className="rounded-lg bg-amber-400/90 px-3 py-1 text-xs font-bold text-black disabled:opacity-50"
+                    title="Test: nạp đủ tiền còn thiếu để tòa này sụp ngay"
+                  >
+                    ⏩ Phá nhanh (test)
+                  </button>
+                )}
               </div>
             ))}
             {data.standingBuildings.length === 0 && (

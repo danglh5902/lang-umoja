@@ -96,6 +96,14 @@ export default function Hud({
         <div className="flex items-center gap-2">
           <span className="text-xl">🌱</span>
           <span className="font-serif text-base font-black tracking-wide">Mầm Xanh Umoja</span>
+          {process.env.NODE_ENV !== "production" && (
+            <span
+              className="rounded-full bg-sky-500/80 px-2 py-0.5 text-[10px] font-bold text-white"
+              title="Đang chạy ở máy (npm run dev) — database riêng prisma/dev.db, không ảnh hưởng bản online"
+            >
+              🧪 Môi trường thử
+            </span>
+          )}
         </div>
         <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-white/80" title="Bầu trời theo giờ thực của bạn">
           {DAY_PART_LABEL[dayPart(hour)]} · {hh}:{mm}
