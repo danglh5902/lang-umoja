@@ -137,50 +137,12 @@ export async function markDonationPaid(orderCode: number) {
     });
 
     if (donation.type === "DEMOLISH" && donation.building) {
-      const before = await tx.building.findUnique({ where: { id: donation.building.id } });
-      const raised = (before?.raisedAmount ?? 0) + donation.amount;
-      const prevPhaseCounts = await tx.building.count({ where: { status: "DESTROYED" } });
-      const total = await tx.building.count({ where: ACTIVE });
-      const prevPhase = computePhase(prevPhaseCounts, total);
-
-      const nowDestroyed = raised >= donation.building.goalAmount && before?.status === "STANDING";
-      const building = await tx.building.update({
-        where: { id: donation.building.id },
-        data: {
-          raisedAmount: raised,
-          ...(nowDestroyed ? { status: "DESTROYED", destroyedAt: new Date() } : {}),
-        },
-      });
-
-      events.push({
-        type: "building-progress",
-        buildingId: building.id,
-        slug: building.slug,
-        name: building.name,
-        raisedAmount: building.raisedAmount,
-        goalAmount: building.goalAmount,
-        payerName: donation.payerName,
-        amount: donation.amount,
-        message: donation.message,
-      });
-
-      if (nowDestroyed) {
-        const destroyedCount = prevPhaseCounts + 1;
-        events.push({
-          type: "building-destroyed",
-          buildingId: building.id,
-          slug: building.slug,
-          name: building.name,
-          destroyedCount,
-          total,
-        });
-        const newPhase = computePhase(destroyedCount, total);
-        if (newPhase !== prevPhase) events.push({ type: "phase-changed", phase: newPhase });
-        if (destroyedCount >= total) {
-          await tx.worldState.update({ where: { id: 1 }, data: { sunsetAt: new Date() } });
-          events.push({ type: "sunset" });
-        }
-      }
+      events.push(
+        ...(await addBuildingProgress(tx, donation.building.id, donation.amount, {
+          payerName: donation.payerName,
+          message: donation.message,
+        }))
+      );
     }
 
     if (donation.type === "FEED" && donation.child && donation.itemSlug) {
@@ -262,4 +224,67 @@ export async function markDonationPaid(orderCode: number) {
 
   for (const e of result.events) emitWorldEvent(e);
   return result.donation;
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Cộng tiến độ phá cho một tòa (dùng chung cho góp tiền và đập búa miễn phí).
+ * Nếu đủ sức hủy diệt thì tòa sụp, đổi hồi, và kết thúc game khi là tòa cuối.
+ */
+export async function addBuildingProgress(
+  tx: Tx,
+  buildingId: string,
+  amount: number,
+  opts: { payerName: string | null; message: string | null; free?: boolean }
+) {
+  const events: Parameters<typeof emitWorldEvent>[0][] = [];
+  const before = await tx.building.findUnique({ where: { id: buildingId } });
+  if (!before) return events;
+  const raised = before.raisedAmount + amount;
+  const prevPhaseCounts = await tx.building.count({ where: { status: "DESTROYED" } });
+  const total = await tx.building.count({ where: ACTIVE });
+  const prevPhase = computePhase(prevPhaseCounts, total);
+
+  const nowDestroyed = raised >= before.goalAmount && before.status === "STANDING";
+  const building = await tx.building.update({
+    where: { id: buildingId },
+    data: {
+      raisedAmount: raised,
+      ...(opts.free ? { freeRaised: { increment: amount } } : {}),
+      ...(nowDestroyed ? { status: "DESTROYED", destroyedAt: new Date() } : {}),
+    },
+  });
+
+  events.push({
+    type: "building-progress",
+    buildingId: building.id,
+    slug: building.slug,
+    name: building.name,
+    raisedAmount: building.raisedAmount,
+    goalAmount: building.goalAmount,
+    payerName: opts.payerName,
+    amount,
+    message: opts.message,
+    free: opts.free,
+  });
+
+  if (nowDestroyed) {
+    const destroyedCount = prevPhaseCounts + 1;
+    events.push({
+      type: "building-destroyed",
+      buildingId: building.id,
+      slug: building.slug,
+      name: building.name,
+      destroyedCount,
+      total,
+    });
+    const newPhase = computePhase(destroyedCount, total);
+    if (newPhase !== prevPhase) events.push({ type: "phase-changed", phase: newPhase });
+    if (destroyedCount >= total) {
+      await tx.worldState.update({ where: { id: 1 }, data: { sunsetAt: new Date() } });
+      events.push({ type: "sunset" });
+    }
+  }
+  return events;
 }

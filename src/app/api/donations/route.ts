@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/db";
-import { isSunset, newOrderCode } from "@/lib/game";
-import { getPaymentProvider } from "@/lib/payment";
+import { decayedStats, isSunset, markDonationPaid, newOrderCode } from "@/lib/game";
+import { FEED_PER_HOUR, refuseReason } from "@/lib/care";
+import { getPaymentProvider, isMockPayment } from "@/lib/payment";
 import { formatKind } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+// số lần tặng quà theo IP + em bé trong 1 giờ (bộ nhớ, app chỉ chạy 1 instance)
+const gf = globalThis as unknown as { feedLog?: Map<string, number[]> };
+const feedLog = gf.feedLog ?? (gf.feedLog = new Map<string, number[]>());
+
+// lần cuối hỏi PayOS cho mỗi đơn (tránh gọi API mỗi 3 giây khi hộp QR đang mở)
+const gc = globalThis as unknown as { payosCheck?: Map<number, number> };
+const lastCheck = gc.payosCheck ?? (gc.payosCheck = new Map<number, number>());
 
 const MIN_AMOUNT = 5000;
 const MAX_AMOUNT = 10_000_000;
@@ -60,6 +69,25 @@ export async function POST(req: Request) {
       prisma.item.findUnique({ where: { slug: body.itemSlug } }),
     ]);
     if (!child || !item) return NextResponse.json({ error: "Không tìm thấy" }, { status: 404 });
+    // quy tắc: chỉ nhận món khi em đang cần
+    const reason = refuseReason(
+      child.name,
+      decayedStats(child),
+      { hunger: item.hungerEffect, thirst: item.thirstEffect, joy: item.joyEffect }
+    );
+    if (reason) return NextResponse.json({ error: reason }, { status: 409 });
+    // quy tắc: giới hạn số món mỗi giờ
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
+    const key = `${ip}:${child.id}`;
+    const now = Date.now();
+    const recent = (feedLog.get(key) ?? []).filter((t) => now - t < 3_600_000);
+    if (recent.length >= FEED_PER_HOUR)
+      return NextResponse.json(
+        { error: `Bạn đã tặng ${child.name} ${FEED_PER_HOUR} món trong 1 giờ qua. Hãy để em nghỉ một lát nhé!` },
+        { status: 429 }
+      );
+    recent.push(now);
+    feedLog.set(key, recent);
     amount = item.price; // giá luôn do server quyết định
     childId = child.id;
     itemSlug = item.slug;
@@ -109,9 +137,27 @@ export async function GET(req: Request) {
     include: { contribution: { select: { buildingId: true } } },
   });
   if (!donation) return NextResponse.json({ error: "Không tìm thấy" }, { status: 404 });
+
+  // Dự phòng khi webhook PayOS không tới: tự hỏi PayOS (tối đa 1 lần / 10 giây / đơn)
+  let status = donation.status;
+  if (status === "PENDING" && !isMockPayment() && Date.now() - (lastCheck.get(orderCode) ?? 0) > 10_000) {
+    lastCheck.set(orderCode, Date.now());
+    try {
+      const { PayOSProvider } = await import("@/lib/payment/payos");
+      const link = await new PayOSProvider().client.paymentRequests.get(orderCode);
+      if (link.status === "PAID") {
+        await markDonationPaid(orderCode); // idempotent, webhook tới sau cũng không cộng 2 lần
+        status = "PAID";
+        lastCheck.delete(orderCode);
+      }
+    } catch (e) {
+      console.error("PayOS get payment failed:", e);
+    }
+  }
+
   return NextResponse.json({
     orderCode,
-    status: donation.status,
+    status,
     // tòa nhà liên quan: tòa được góp búa, hoặc tòa kẻ xấu vừa dựng bằng khoản phí này
     buildingId: donation.buildingId ?? donation.contribution?.buildingId ?? null,
   });

@@ -5,6 +5,7 @@ import type { BuildingData } from "@/lib/world-types";
 import { useWorld } from "@/store/world";
 import QrModal, { type PaymentPayload } from "./QrModal";
 import { getDonorName, saveDonorName } from "@/lib/donorName";
+import { FREE_HIT_COOLDOWN_MS } from "@/lib/care";
 import { destructionLevelFor, formatDestroy, formatKind, fromUnits, toUnits } from "@/lib/format";
 
 const PRESETS = [10000, 20000, 50000, 100000];
@@ -19,6 +20,37 @@ export default function BuildingPanel({ building }: { building: BuildingData }) 
   const [payment, setPayment] = useState<PaymentPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [hitting, setHitting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [hitMsg, setHitMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+  useEffect(() => {
+    setCooldown(0);
+    setHitMsg(null);
+  }, [building.id]);
+
+  const hit = async () => {
+    setHitting(true);
+    setHitMsg(null);
+    setError(null);
+    const res = await fetch("/api/hammer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ buildingId: building.id, name: payerName.trim() || getDonorName() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setHitting(false);
+    if (res.ok) {
+      setCooldown(Math.ceil((data.cooldownMs ?? FREE_HIT_COOLDOWN_MS) / 1000));
+      setHitMsg(`🔨 ${data.message ?? "Trúng rồi!"}`);
+    } else if (data.retryAfterMs) setCooldown(Math.ceil(data.retryAfterMs / 1000));
+    else setError(data.error ?? "Có lỗi xảy ra");
+  };
 
   const progress = Math.min(1, building.raisedAmount / building.goalAmount);
   const remaining = Math.max(0, building.goalAmount - building.raisedAmount);
@@ -111,6 +143,20 @@ export default function BuildingPanel({ building }: { building: BuildingData }) 
             Đã góp {formatKind(building.raisedAmount)} / sức hủy diệt {formatDestroy(building.goalAmount)}
             {remaining > 0 && ` — còn thiếu ${formatKind(remaining)}`}
           </p>
+        </div>
+
+        <div className="mt-4">
+          <button
+            disabled={hitting || cooldown > 0}
+            onClick={hit}
+            className="w-full rounded-xl bg-emerald-500/20 py-2.5 text-sm font-black text-emerald-200 hover:bg-emerald-400/30 disabled:opacity-50"
+          >
+            {cooldown > 0 ? `🔨 Tay mỏi, thử lại sau ${cooldown}s` : "🔨 Đập 1 nhát búa — miễn phí"}
+          </button>
+          <p className="mt-1 text-center text-[10px] text-white/45">
+            Mỗi nhát +1 nhân đạo, ai cũng làm được. Phần miễn phí tối đa 10% mỗi tòa, phần còn lại cần góp.
+          </p>
+          {hitMsg && <p className="mt-1 text-center text-xs text-emerald-300">{hitMsg}</p>}
         </div>
 
         <div className="mt-4">

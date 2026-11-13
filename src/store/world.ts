@@ -3,6 +3,7 @@ import type { HonorEntry, WorldData } from "@/lib/world-types";
 import { ANONYMOUS_NAME, formatKind } from "@/lib/format";
 import { playCollapse, playGift, playHammer, playPhase } from "@/lib/sfx";
 import type { WorldEvent } from "@/lib/events";
+import { CARE_ACTIONS } from "@/lib/care";
 
 export interface LogEntry {
   id: number;
@@ -126,15 +127,29 @@ export const useWorld = create<WorldStore>((set, get) => ({
         set({
           world: {
             ...world,
-            totalRaised: world.totalRaised + e.amount,
-            totalDonations: world.totalDonations + 1,
-            honor: bumpHonor(world.honor, e.payerName, e.amount),
+            // nhát búa miễn phí không cộng vào tổng nhân đạo / bảng vinh danh
+            ...(e.free
+              ? {}
+              : {
+                  totalRaised: world.totalRaised + e.amount,
+                  totalDonations: world.totalDonations + 1,
+                  honor: bumpHonor(world.honor, e.payerName, e.amount),
+                }),
             buildings: world.buildings.map((b) =>
               b.id === e.buildingId ? { ...b, raisedAmount: e.raisedAmount } : b
             ),
           },
         });
         const who = e.payerName ?? "Một người ẩn danh";
+        if (e.free) {
+          pushLog(
+            `🔨 ${who} vừa đập một nhát búa vào "${e.name}" (${Math.min(
+              100,
+              Math.round((e.raisedAmount / e.goalAmount) * 100)
+            )}%)`
+          );
+          break;
+        }
         pushLog(
           `⚒️ ${who} góp ${formatKind(e.amount)} phá "${e.name}" (${Math.min(
             100,
@@ -185,6 +200,23 @@ export const useWorld = create<WorldStore>((set, get) => ({
         const emoji = world.items.find((i) => i.slug === e.itemSlug)?.emoji ?? "🎁";
         pushLog(`${emoji} ${who} vừa tặng ${e.childName} ${e.itemName.toLowerCase()}!`);
         refetchSoon();
+        break;
+      }
+      case "child-cared": {
+        playGift();
+        set((s) => ({
+          celebrating: { ...s.celebrating, [e.childId]: Date.now() },
+          world: s.world
+            ? {
+                ...s.world,
+                children: s.world.children.map((c) =>
+                  c.id === e.childId ? { ...c, hunger: e.hunger, thirst: e.thirst, joy: e.joy } : c
+                ),
+              }
+            : s.world,
+        }));
+        const act = CARE_ACTIONS[e.kind];
+        pushLog(`${act.emoji} ${e.name ?? "Một người ẩn danh"} vừa ${act.log} ${e.childName}.`);
         break;
       }
       case "building-created": {

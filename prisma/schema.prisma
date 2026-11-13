@@ -17,6 +17,7 @@ model Building {
   crimes          String // JSON: { waterPerDay, powerPerDay, landTaken }
   goalAmount      Int
   raisedAmount    Int        @default(0)
+  freeRaised      Int        @default(0) // phần raisedAmount từ đập búa miễn phí (không vào vinh danh)
   status          String     @default("STANDING") // STANDING | DESTROYED
   gridX           Int
   gridY           Int

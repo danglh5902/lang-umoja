@@ -11,6 +11,7 @@ export type WorldEvent =
       payerName: string | null;
       amount: number;
       message: string | null;
+      free?: boolean;
     }
   | { type: "building-destroyed"; buildingId: string; slug: string; name: string; destroyedCount: number; total: number }
   | {
@@ -25,6 +26,16 @@ export type WorldEvent =
       thirst: number;
       joy: number;
       growthStage: number;
+    }
+  | {
+      type: "child-cared";
+      childId: string;
+      childName: string;
+      kind: "water" | "fruit" | "play";
+      name: string | null;
+      hunger: number;
+      thirst: number;
+      joy: number;
     }
   | { type: "building-created"; buildingId: string; slug: string; name: string; contributorName: string | null }
   | { type: "building-removed"; buildingId: string }
