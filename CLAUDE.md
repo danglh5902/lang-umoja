@@ -85,6 +85,9 @@ deploy/ + Dockerfile + .github/workflows/ci-cd.yml   → xem DEPLOY.md
   `PrismaBetterSqlite3` (đúng chữ hoa/thường này). Client sinh ra ở `src/generated/prisma`.
 - **Không dùng `NEXT_PUBLIC_*` cho cấu hình server** — Next đóng băng giá trị lúc build (image Docker build trên
   CI). Dùng `SITE_URL` (đọc lúc chạy).
+- **Docker**: image `node:*-slim` không có OpenSSL → phải `apt-get install openssl` ở CẢ stage build lẫn
+  runner, và `COPY --chown=node:node`; thiếu thì `prisma migrate deploy` đoán sai OpenSSL, cố tải engine vào
+  `node_modules` (không có quyền ghi) → container khởi động lại liên tục.
 - `cacheComponents` đã tắt (app hoàn toàn dynamic, dùng `export const dynamic = "force-dynamic"`).
 - Camera: `CameraRig` trong `WorldCanvas.tsx` — chọn tòa/em bé/bảng thì trượt khung hình về giữa; khi
   `cinematic` khác null thì khóa điều khiển. Rời intro bằng mọi đường phải `setCinematic(null)` (đã có cleanup).

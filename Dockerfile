@@ -2,9 +2,10 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-# công cụ biên dịch phòng khi better-sqlite3 không có bản dựng sẵn
+# công cụ biên dịch phòng khi better-sqlite3 không có bản dựng sẵn;
+# openssl để Prisma nhận đúng phiên bản (3.0.x) và tải đúng engine ngay lúc build
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
+  && apt-get install -y --no-install-recommends python3 make g++ openssl \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
@@ -16,6 +17,10 @@ RUN npx prisma generate && npm run build
 # ---------- chạy ----------
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
+# Prisma CLI (migrate deploy) cần OpenSSL; thiếu nó Prisma đoán sai phiên bản rồi cố tải engine khi khởi động
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
@@ -23,7 +28,7 @@ ENV NODE_ENV=production \
     DATABASE_PATH=/app/data/umoja.db
 
 # giữ nguyên node_modules đầy đủ: cần Prisma CLI để chạy migrate/seed trong container
-COPY --from=builder /app ./
+COPY --from=builder --chown=node:node /app ./
 RUN mkdir -p /app/data && chown -R node:node /app/data
 
 USER node
