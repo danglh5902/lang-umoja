@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0f1411;
+  --foreground: #f1efe9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-be-vietnam), system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-be-vietnam), system-ui, sans-serif;
+}
+
+/* ===== Hiệu ứng điện ảnh cho phần dẫn truyện ===== */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes quake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-6px, 3px); }
+  20% { transform: translate(5px, -4px); }
+  30% { transform: translate(-4px, -2px); }
+  40% { transform: translate(4px, 4px); }
+  50% { transform: translate(-3px, 2px); }
+  60% { transform: translate(3px, -3px); }
+  70% { transform: translate(-2px, 1px); }
+  80% { transform: translate(1px, -1px); }
+}
+@keyframes redFlash {
+  0% { opacity: 0; }
+  8% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+@keyframes whiteFlash {
+  0% { opacity: 0; }
+  10% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 18px rgba(120, 255, 170, 0.45)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 42px rgba(120, 255, 170, 0.85)); }
+}
+@keyframes ember {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(-80vh) translateX(var(--drift, 30px)); opacity: 0; }
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  41% { opacity: 1; }
+  42% { opacity: 0.4; }
+  43% { opacity: 1; }
+  77% { opacity: 1; }
+  78% { opacity: 0.55; }
+  80% { opacity: 1; }
+}
+@keyframes caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes bubblePop {
+  0% { opacity: 0; transform: translateY(6px) scale(0.85); }
+  100% { opacity: 1; transform: none; }
+}
+
+.glitch {
+  position: relative;
+  color: #ff5a4a;
+  text-shadow: 2px 0 rgba(0, 255, 230, 0.6), -2px 0 rgba(255, 0, 90, 0.6);
+  animation: flicker 2.2s infinite;
+}
+.gold-text {
+  color: #ffd98a;
+  text-shadow: 0 0 18px rgba(255, 196, 90, 0.55);
+}
+.blood-text {
+  color: #ff6b5b;
+  text-shadow: 0 0 14px rgba(255, 60, 40, 0.5);
+}
+.film-grain {
+  pointer-events: none;
+  position: absolute;
+  inset: -50%;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }

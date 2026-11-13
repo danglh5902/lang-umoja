@@ -1,0 +1,5 @@
+# Giữ kiểu xuống dòng LF trên mọi máy (Windows/Mac/Linux)
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jpg binary

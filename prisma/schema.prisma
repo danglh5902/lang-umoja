@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  // SQLite khi dev. Deploy: đổi provider = "postgresql" (url nằm trong prisma.config.ts)
+  provider = "sqlite"
+}
+
+model Building {
+  id              String     @id @default(cuid())
+  slug            String     @unique
+  name            String
+  slogan          String
+  lore            String
+  crimes          String // JSON: { waterPerDay, powerPerDay, landTaken }
+  goalAmount      Int
+  raisedAmount    Int        @default(0)
+  status          String     @default("STANDING") // STANDING | DESTROYED
+  gridX           Int
+  gridY           Int
+  destroyedAt     DateTime?
+  source          String     @default("SEED") // SEED | COMMUNITY
+  contributorName String?
+  createdAt       DateTime   @default(now())
+  donations       Donation[]
+}
+
+model Child {
+  id             String     @id @default(cuid())
+  name           String
+  backstory      String
+  hunger         Int        @default(30)
+  thirst         Int        @default(30)
+  joy            Int        @default(20)
+  growthStage    Int        @default(1) // 1..3
+  totalFedAmount Int        @default(0)
+  gridX          Int
+  gridY          Int
+  statsUpdatedAt DateTime   @default(now())
+  donations      Donation[]
+}
+
+model Item {
+  slug         String @id
+  name         String
+  emoji        String
+  price        Int
+  hungerEffect Int    @default(0)
+  thirstEffect Int    @default(0)
+  joyEffect    Int    @default(0)
+}
+
+model Donation {
+  id           String        @id @default(cuid())
+  type         String // DEMOLISH | FEED | CONTRIBUTE_FEE
+  buildingId   String?
+  building     Building?     @relation(fields: [buildingId], references: [id])
+  childId      String?
+  child        Child?        @relation(fields: [childId], references: [id])
+  itemSlug     String?
+  amount       Int
+  status       String        @default("PENDING") // PENDING | PAID | EXPIRED
+  orderCode    Int           @unique
+  payerName    String?
+  message      String?
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  contribution Contribution?
+}
+
+model Contribution {
+  id              String    @id @default(cuid())
+  name            String
+  slogan          String
+  lore            String
+  crimes          String
+  contributorName String?
+  status          String    @default("AWAITING_PAYMENT") // AWAITING_PAYMENT | PENDING_REVIEW | APPROVED | REJECTED
+  donationId      String?   @unique
+  donation        Donation? @relation(fields: [donationId], references: [id])
+  buildingId      String?
+  createdAt       DateTime  @default(now())
+}
+
+model WorldState {
+  id       Int       @id @default(1)
+  sunsetAt DateTime?
+}

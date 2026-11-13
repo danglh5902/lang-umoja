@@ -32,6 +32,18 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# dữ liệu thật — không đưa lên git
+/prisma/*.db
+/prisma/*.db-journal
+/data/
+
+# Prisma client sinh tự động (tạo lại bằng `npx prisma generate`)
+/src/generated/
+
+# cài đặt Claude Code cá nhân (settings.json + launch.json dùng chung thì được commit)
+/.claude/settings.local.json
 
 # vercel
 .vercel
